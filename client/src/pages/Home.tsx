@@ -2,13 +2,18 @@ import Layout from "@/components/Layout";
 import MetricCard from "@/components/MetricCard";
 import ChannelSearch from "@/components/ChannelSearch";
 import VideoGrid from "@/components/VideoGrid";
+import VideoTable from "@/components/VideoTable";
+import DateRangePicker from "@/components/DateRangePicker";
+import VideoComparison from "@/components/VideoComparison";
+import TrendChart from "@/components/TrendChart";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowRight, Play, Users, Eye, Activity, Loader } from "lucide-react";
+import { ArrowRight, Play, Users, Eye, Activity, Loader, Download } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useYouTubeChannel } from "@/hooks/useYouTube";
 import { formatNumber } from "@/lib/utils";
 import { useState } from "react";
+import { filterVideosByDateRange, getVideoComparison, calculateChannelMetrics, exportVideosToCSV, exportChannelMetricsToCSV, VideoMetrics } from "@/lib/analytics";
 
 // Tu canal de YouTube
 const DEFAULT_CHANNEL_ID = "UCIlucAowvh8GUqsysgbpeMg";
@@ -16,9 +21,17 @@ const DEFAULT_CHANNEL_ID = "UCIlucAowvh8GUqsysgbpeMg";
 export default function Home() {
   const [channelId, setChannelId] = useState<string | null>(DEFAULT_CHANNEL_ID);
   const { stats, loading, error } = useYouTubeChannel(channelId);
+  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
+    start: null,
+    end: null,
+  });
 
   const handleChannelSearch = (id: string) => {
     setChannelId(id);
+  };
+
+  const handleDateRangeChange = (start: Date | null, end: Date | null) => {
+    setDateRange({ start, end });
   };
 
   // Usar datos reales si están disponibles, sino usar datos de demostración
@@ -34,7 +47,28 @@ export default function Home() {
 
   const chartData = stats?.dailyViews || defaultData;
   const channel = stats?.channelInfo;
-  const videos = stats?.videoPerformance || [];
+  const allVideos = (stats?.videoPerformance || []) as VideoMetrics[];
+  
+  // Filter videos by date range
+  const filteredVideos = filterVideosByDateRange(allVideos, dateRange.start, dateRange.end);
+  
+  // Get best/worst performing videos
+  const { best, worst } = getVideoComparison(filteredVideos);
+  
+  // Calculate metrics for filtered videos
+  const metrics = calculateChannelMetrics(filteredVideos, channel?.subscribers || 0, channel?.viewCount || 0);
+
+  const handleExportVideos = () => {
+    if (filteredVideos.length > 0) {
+      exportVideosToCSV(filteredVideos, `videos-${new Date().toISOString().split('T')[0]}.csv`);
+    }
+  };
+
+  const handleExportMetrics = () => {
+    if (channel) {
+      exportChannelMetricsToCSV(metrics, channel.title, `metrics-${new Date().toISOString().split('T')[0]}.csv`);
+    }
+  };
 
   return (
     <Layout>
@@ -112,10 +146,10 @@ export default function Home() {
             />
             <MetricCard 
               title="Videos Publicados" 
-              value={channel?.videoCount || 0} 
+              value={metrics.videoCount} 
               trend="up" 
               trendValue="Total" 
-              description="Cantidad total de videos en el canal."
+              description={`${filteredVideos.length} en el período seleccionado`}
               delay={200}
             />
             <MetricCard 
@@ -123,17 +157,39 @@ export default function Home() {
               value={formatNumber(channel?.viewCount || 0)} 
               trend="up" 
               trendValue="Todo tiempo" 
-              description="Vistas acumuladas del canal."
+              description={`${formatNumber(metrics.avgViewsPerVideo)} vistas promedio/video`}
               delay={300}
             />
             <MetricCard 
-              title="Videos en Análisis" 
-              value={videos.length} 
-              trend="down" 
-              trendValue="Últimos" 
-              description="Videos más recientes analizados."
+              title="Engagement Promedio" 
+              value={metrics.avgEngagementRate.toFixed(2) + '%'} 
+              trend={metrics.avgEngagementRate > 5 ? "up" : "down"} 
+              trendValue={metrics.avgEngagementRate > 5 ? "Excelente" : "Mejorable"} 
+              description="Tasa de engagement del canal"
               delay={400}
             />
+          </div>
+
+          {/* Additional Metrics Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            <div className="border border-border bg-card p-4 rounded">
+              <p className="text-xs text-muted-foreground font-mono mb-2">VISTAS PROMEDIO</p>
+              <p className="text-2xl font-bold font-mono text-primary">{formatNumber(metrics.avgViewsPerVideo)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Por video en período</p>
+            </div>
+            <div className="border border-border bg-card p-4 rounded">
+              <p className="text-xs text-muted-foreground font-mono mb-2">LIKES PROMEDIO</p>
+              <p className="text-2xl font-bold font-mono text-primary">{formatNumber(metrics.avgLikesPerVideo)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Por video en período</p>
+            </div>
+            <div className="border border-border bg-card p-4 rounded">
+              <p className="text-xs text-muted-foreground font-mono mb-2">FILTROS ACTIVOS</p>
+              <div className="flex items-center gap-2 mt-2">
+                <DateRangePicker 
+                  onRangeChange={handleDateRangeChange}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Chart Section */}
@@ -201,26 +257,72 @@ export default function Home() {
                 </p>
               </div>
               
-              <div className="mt-8 p-4 border border-primary/20 bg-primary/5">
-                <div className="flex justify-between items-center mb-2">
+              <div className="mt-8 p-4 border border-primary/20 bg-primary/5 space-y-3">
+                <div className="flex justify-between items-center">
                   <span className="text-xs font-mono text-primary">ESTADO</span>
                   <span className="text-xs font-mono text-primary animate-pulse">ACTIVO</span>
                 </div>
-                <p className="text-sm font-medium">
-                  Canal analizado correctamente
-                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleExportMetrics}
+                    size="sm"
+                    className="flex-1 bg-primary/20 text-primary hover:bg-primary/30 font-mono rounded-none border border-primary/30 text-xs gap-1"
+                  >
+                    <Download className="w-3 h-3" />
+                    EXPORTAR
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Videos Section */}
-          {videos.length > 0 && (
+          {/* Trend Chart */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12">
+              <TrendChart videos={filteredVideos} period="weekly" />
+            </div>
+          )}
+
+          {/* Video Comparison */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12">
+              <h2 className="font-mono text-sm text-muted-foreground mb-6 flex items-center gap-2">
+                <span className="w-1 h-4 bg-primary" />
+                ANÁLISIS COMPARATIVO DE VIDEOS
+              </h2>
+              <VideoComparison best={best} worst={worst} />
+            </div>
+          )}
+
+          {/* Videos Table */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-mono text-sm text-muted-foreground flex items-center gap-2">
+                  <span className="w-1 h-4 bg-primary" />
+                  TODOS LOS VIDEOS - DETALLES COMPLETOS ({filteredVideos.length})
+                </h2>
+                <Button
+                  onClick={handleExportVideos}
+                  size="sm"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-mono rounded-none border border-primary text-xs gap-1"
+                >
+                  <Download className="w-3 h-3" />
+                  EXPORTAR CSV
+                </Button>
+              </div>
+              <VideoTable videos={filteredVideos} />
+            </div>
+          )}
+
+          {/* Videos Grid */}
+          {filteredVideos.length > 0 && (
             <div className="mb-12">
               <h2 className="font-mono text-sm text-muted-foreground mb-6 flex items-center gap-2">
                 <span className="w-1 h-4 bg-primary" />
                 VIDEOS CON MEJOR RENDIMIENTO
               </h2>
-              <VideoGrid videos={videos} />
+              <VideoGrid videos={filteredVideos} />
             </div>
           )}
         </>

@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
 import youtubeService, { ChannelStats, YouTubeChannel, YouTubeVideo } from '@/services/youtubeService';
+import { enrichVideoMetrics, VideoMetrics } from '@/lib/analytics';
+
+export interface EnrichedChannelStats extends ChannelStats {
+  videoPerformance?: VideoMetrics[];
+}
 
 export function useYouTubeChannel(channelId: string | null) {
-  const [stats, setStats] = useState<ChannelStats | null>(null);
+  const [stats, setStats] = useState<EnrichedChannelStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -13,7 +18,16 @@ export function useYouTubeChannel(channelId: string | null) {
       setLoading(true);
       try {
         const data = await youtubeService.getChannelStats(channelId);
-        setStats(data);
+        
+        // Enrich video data with engagement metrics
+        const enrichedVideos = (data.videoPerformance || []).map(enrichVideoMetrics);
+        
+        const enrichedStats: EnrichedChannelStats = {
+          ...data,
+          videoPerformance: enrichedVideos as any,
+        };
+        
+        setStats(enrichedStats);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to fetch data'));
