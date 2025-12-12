@@ -4,7 +4,7 @@ import { Eye, ThumbsUp, MessageCircle, Play } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface VideoGridProps {
-  videos: YouTubeVideo[];
+  videos: (YouTubeVideo | any)[];
 }
 
 function parseDuration(duration: string): string {
@@ -64,18 +64,18 @@ export default function VideoGrid({ videos }: VideoGridProps) {
               <div className="space-y-2 text-xs text-muted-foreground font-mono">
                 <div className="flex items-center gap-2">
                   <Eye className="w-4 h-4" />
-                  <span>{formatNumber(video.viewCount)} views</span>
+                  <span>{formatNumber((video as any).viewCount || (video as any).views)} vistas</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <ThumbsUp className="w-4 h-4" />
-                  <span>{formatNumber(video.likeCount)} likes</span>
+                  <span>{formatNumber((video as any).likeCount || (video as any).likes)} likes</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MessageCircle className="w-4 h-4" />
-                  <span>{formatNumber(video.commentCount)} comentarios</span>
+                  <span>{formatNumber((video as any).commentCount || (video as any).comments)} comentarios</span>
                 </div>
                 <div className="text-xs pt-2 border-t border-border">
-                  {formatDate(video.publishedAt)}
+                  {formatDate((video as any).publishedAt)}
                 </div>
               </div>
             </CardContent>

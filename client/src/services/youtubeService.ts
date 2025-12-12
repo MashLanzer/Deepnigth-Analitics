@@ -55,13 +55,13 @@ class YouTubeService {
       if (!channel) throw new Error('Canal no encontrado');
 
       return {
-        id: channel.id,
-        title: channel.snippet.title,
-        description: channel.snippet.description,
-        thumbnail: channel.snippet.thumbnails.medium?.url || channel.snippet.thumbnails.default?.url,
-        subscribers: parseInt(channel.statistics.subscriberCount) || 0,
-        viewCount: parseInt(channel.statistics.viewCount) || 0,
-        videoCount: parseInt(channel.statistics.videoCount) || 0,
+        id: channel.id || '',
+        title: channel.snippet?.title || 'Sin título',
+        description: channel.snippet?.description || '',
+        thumbnail: channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url || '',
+        subscribers: Math.max(0, parseInt(channel.statistics?.subscriberCount) || 0),
+        viewCount: Math.max(0, parseInt(channel.statistics?.viewCount) || 0),
+        videoCount: Math.max(0, parseInt(channel.statistics?.videoCount) || 0),
       };
     } catch (error) {
       console.error('Error fetching channel info:', error);
@@ -104,14 +104,14 @@ class YouTubeService {
       });
 
       return detailsResponse.data.items.map((video: any) => ({
-        id: video.id,
-        title: video.snippet.title,
-        thumbnail: video.snippet.thumbnails.medium?.url || video.snippet.thumbnails.default?.url,
-        viewCount: parseInt(video.statistics.viewCount) || 0,
-        likeCount: parseInt(video.statistics.likeCount || '0') || 0,
-        commentCount: parseInt(video.statistics.commentCount) || 0,
-        publishedAt: video.snippet.publishedAt,
-        duration: video.contentDetails.duration,
+        id: video.id || '',
+        title: video.snippet?.title || 'Sin título',
+        thumbnail: video.snippet?.thumbnails?.medium?.url || video.snippet?.thumbnails?.default?.url || '',
+        viewCount: Math.max(0, parseInt(video.statistics?.viewCount) || 0),
+        likeCount: Math.max(0, parseInt(video.statistics?.likeCount || '0') || 0),
+        commentCount: Math.max(0, parseInt(video.statistics?.commentCount || '0') || 0),
+        publishedAt: video.snippet?.publishedAt || new Date().toISOString(),
+        duration: video.contentDetails?.duration || 'PT0S',
       }));
     } catch (error) {
       console.error('Error fetching top videos:', error);

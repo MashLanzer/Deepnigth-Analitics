@@ -147,7 +147,7 @@ export default function VideoTable({ videos, onVideoSelect }: VideoTableProps) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className="text-sm font-mono text-muted-foreground">
-                    {video.publishedAt ? formatDate(video.publishedAt) : '—'}
+                    {video.publishedAt && typeof video.publishedAt === 'string' ? formatDate(video.publishedAt) : '—'}
                   </span>
                 </td>
               </tr>
