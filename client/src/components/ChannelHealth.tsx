@@ -15,7 +15,7 @@ interface HealthMetric {
 }
 
 export default function ChannelHealth({ metrics, videos }: ChannelHealthProps) {
-  const calculateHealthMetrics = (): HealthMetric[] => {
+  const calculateHealthMetrics = (): { metrics: HealthMetric[]; recentCount: number } => {
     const metrics_array: HealthMetric[] = [];
 
     // 1. Engagement Rate Check (target: > 3%)
@@ -93,10 +93,10 @@ export default function ChannelHealth({ metrics, videos }: ChannelHealthProps) {
             : 'Enfócate en mejorar CTR de suscripción',
     });
 
-    return metrics_array;
+    return { metrics: metrics_array, recentCount: recentVideos.length };
   };
 
-  const healthMetrics = calculateHealthMetrics();
+  const { metrics: healthMetrics, recentCount } = calculateHealthMetrics();
   const overallScore = (healthMetrics.reduce((sum, m) => sum + (m.score / m.max) * 100, 0) / healthMetrics.length).toFixed(0);
 
   const getStatusIcon = (status: string) => {
@@ -180,7 +180,7 @@ export default function ChannelHealth({ metrics, videos }: ChannelHealthProps) {
               • Mejora tus títulos: incluye palabras clave y emoción
             </li>
           )}
-          {recentVideos.length < 2 && (
+          {recentCount < 2 && (
             <li className="text-xs text-muted-foreground font-mono">
               • Publica más frecuentemente (al menos 2/mes recomendado)
             </li>
