@@ -15,14 +15,33 @@ import DayOfWeekAnalytics from "@/components/DayOfWeekAnalytics";
 import AudienceDemographics from "@/components/AudienceDemographics";
 import ContentCalendar from "@/components/ContentCalendar";
 import GrowthAnalytics from "@/components/GrowthAnalytics";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, Play, Users, Eye, Activity, Loader, Download } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useYouTubeChannel } from "@/hooks/useYouTube";
 import { formatNumber } from "@/lib/utils";
-import { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { filterVideosByDateRange, getVideoComparison, calculateChannelMetrics, exportVideosToCSV, exportChannelMetricsToCSV, VideoMetrics } from "@/lib/analytics";
+import KPIPanel from '@/components/KPIPanel';
+import VideoDetailModal from '@/components/VideoDetailModal';
+import VideoFilters from '@/components/VideoFilters';
+import TrafficSourcesChart from '@/components/TrafficSourcesChart';
+import RetentionHeatmap from '@/components/RetentionHeatmap';
+import KPIsSparkline from '@/components/KPIsSparkline';
+
+// Lazy-load heavy components to reduce initial bundle size
+const ChannelComparison = lazy(() => import("@/components/ChannelComparison"));
+const DayOfWeekAnalytics = lazy(() => import("@/components/DayOfWeekAnalytics"));
+const AudienceDemographics = lazy(() => import("@/components/AudienceDemographics"));
+const ContentCalendar = lazy(() => import("@/components/ContentCalendar"));
+const GrowthAnalytics = lazy(() => import("@/components/GrowthAnalytics"));
+const ThemeToggle = lazy(() => import("@/components/ThemeToggle"));
+const SubscriberGrowthChart = lazy(() => import("@/components/SubscriberGrowthChart"));
+const EngagementOverTime = lazy(() => import("@/components/EngagementOverTime"));
+const WatchTimeByVideo = lazy(() => import("@/components/WatchTimeByVideo"));
+const ChartExportButton = lazy(() => import("@/components/ChartExportButton"));
 
 // Tu canal de YouTube
 const DEFAULT_CHANNEL_ID = "UCIlucAowvh8GUqsysgbpeMg";
@@ -89,6 +108,24 @@ export default function Home() {
     }
   };
 
+  // Video detail modal state
+  const [selectedVideo, setSelectedVideo] = useState<VideoMetrics | null>(null);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+
+  const onVideoSelect = (video: VideoMetrics) => {
+    setSelectedVideo(video);
+    setVideoModalOpen(true);
+  };
+
+  // Filters state
+  const [filters, setFilters] = useState<{ tag?: string; minViews?: number }>({});
+  if (filters.tag) {
+    filteredVideos = filteredVideos.filter(v => (v.tags || []).includes(filters.tag!));
+  }
+  if (filters.minViews) {
+    filteredVideos = filteredVideos.filter(v => (v.views || 0) >= filters.minViews!);
+  }
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -100,6 +137,12 @@ export default function Home() {
             className="w-full h-full object-cover opacity-20 mix-blend-screen"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
+        </div>
+
+        <div className="absolute top-4 right-4 z-20">
+          <Suspense fallback={<div className="p-1 bg-card/50 rounded">...</div>}>
+            <ThemeToggle />
+          </Suspense>
         </div>
 
         <div className="relative z-10 max-w-2xl">
@@ -151,6 +194,13 @@ export default function Home() {
         </div>
       )}
 
+      {/* Filters */}
+      {stats && (
+        <div className="mb-6">
+          <VideoFilters videos={allVideos} onFilterChange={(f)=>setFilters(f)} />
+        </div>
+      )}
+
       {/* Metrics Grid */}
       {stats && (
         <>
@@ -188,6 +238,9 @@ export default function Home() {
               delay={400}
             />
           </div>
+
+          {/* KPI Panel */}
+          <KPIPanel videos={filteredVideos} channelTitle={channel?.title} />
 
           {/* Additional Metrics Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
@@ -330,7 +383,7 @@ export default function Home() {
                   EXPORTAR CSV
                 </Button>
               </div>
-              <VideoTable videos={filteredVideos} />
+              <VideoTable videos={filteredVideos} onVideoSelect={onVideoSelect} />
             </div>
           )}
 
@@ -381,37 +434,94 @@ export default function Home() {
             </div>
           )}
 
+          {/* Video detail modal */}
+          <VideoDetailModal video={selectedVideo} open={videoModalOpen} onClose={() => setVideoModalOpen(false)} />
+
           {/* Day of Week Analytics */}
           {filteredVideos.length > 0 && (
             <div className="mb-12">
-              <DayOfWeekAnalytics videos={filteredVideos} />
+              <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando análisis por día...</div>}>
+                <DayOfWeekAnalytics videos={filteredVideos} />
+              </Suspense>
             </div>
           )}
 
           {/* Growth Analytics */}
           {channel && (
             <div className="mb-12">
-              <GrowthAnalytics channelTitle={channel.title} />
+              <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando métricas de crecimiento...</div>}>
+                <GrowthAnalytics channelTitle={channel.title} />
+              </Suspense>
+            </div>
+          )}
+
+          {/* Visual Tools: Subscriber Growth + Engagement + Watch Time */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12 grid gap-6 lg:grid-cols-3">
+              <div id="subs-chart" className="col-span-1">
+                <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando gráfico...</div>}>
+                  <SubscriberGrowthChart videos={filteredVideos} />
+                  <div className="mt-2 flex gap-2">
+                    <Suspense>
+                      <ChartExportButton targetId="subs-chart" filename={`subs-${new Date().toISOString().split('T')[0]}.png`} />
+                    </Suspense>
+                  </div>
+                </Suspense>
+              </div>
+
+              <div id="engagement-chart" className="col-span-1">
+                <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando gráfico...</div>}>
+                  <EngagementOverTime videos={filteredVideos} />
+                  <div className="mt-2">
+                    <ChartExportButton targetId="engagement-chart" filename={`engagement-${new Date().toISOString().split('T')[0]}.png`} />
+                  </div>
+                </Suspense>
+              </div>
+
+              <div id="watchtime-chart" className="col-span-1">
+                <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando gráfico...</div>}>
+                  <WatchTimeByVideo videos={filteredVideos} />
+                  <div className="mt-2">
+                    <ChartExportButton targetId="watchtime-chart" filename={`watchtime-${new Date().toISOString().split('T')[0]}.png`} />
+                  </div>
+                </Suspense>
+              </div>
             </div>
           )}
 
           {/* Audience Demographics */}
           {channel && (
             <div className="mb-12">
-              <AudienceDemographics channelTitle={channel.title} />
+              <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando demografía...</div>}>
+                <AudienceDemographics channelTitle={channel.title} />
+              </Suspense>
             </div>
           )}
 
           {/* Content Calendar */}
           {filteredVideos.length > 0 && (
             <div className="mb-12">
-              <ContentCalendar videos={filteredVideos} />
+              <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando calendario...</div>}>
+                <ContentCalendar videos={filteredVideos} />
+              </Suspense>
             </div>
           )}
 
           {/* Channel Comparison */}
           <div className="mb-12">
-            <ChannelComparison />
+            <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando comparación...</div>}>
+              <ChannelComparison />
+            </Suspense>
+          </div>
+          
+          {/* Traffic Sources & Retention */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+            <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando fuentes...</div>}>
+              <TrafficSourcesChart />
+            </Suspense>
+            <Suspense fallback={<div className="p-4 border border-border rounded bg-card">Cargando retención...</div>}>
+              <RetentionHeatmap videos={filteredVideos} />
+            </Suspense>
           </div>
         </>
       )}

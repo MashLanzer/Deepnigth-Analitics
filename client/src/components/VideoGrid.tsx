@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface VideoGridProps {
   videos: (YouTubeVideo | any)[];
+  onVideoSelect?: (video: any) => void;
 }
 
 function parseDuration(duration: string): string {
@@ -24,7 +25,7 @@ function parseDuration(duration: string): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export default function VideoGrid({ videos }: VideoGridProps) {
+export default function VideoGrid({ videos, onVideoSelect }: VideoGridProps) {
   if (!videos || videos.length === 0) {
     return (
       <div className="text-center py-12">
@@ -35,15 +36,9 @@ export default function VideoGrid({ videos }: VideoGridProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {videos.map((video) => (
-        <a
-          key={video.id}
-          href={`https://youtube.com/watch?v=${video.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group"
-        >
-          <Card className="overflow-hidden hover:border-primary/50 transition-colors h-full cursor-pointer">
+      {videos.map((video) => {
+        const content = (
+          <Card className="overflow-hidden hover:border-primary/50 transition-colors h-full">
             <div className="relative overflow-hidden bg-black/50 aspect-video">
               <img
                 src={video.thumbnail}
@@ -80,8 +75,18 @@ export default function VideoGrid({ videos }: VideoGridProps) {
               </div>
             </CardContent>
           </Card>
-        </a>
-      ))}
+        );
+
+        return onVideoSelect ? (
+          <div key={video.id} className="group cursor-pointer" onClick={() => onVideoSelect(video)}>
+            {content}
+          </div>
+        ) : (
+          <a key={video.id} href={`https://youtube.com/watch?v=${video.id}`} target="_blank" rel="noopener noreferrer" className="group">
+            {content}
+          </a>
+        );
+      })}
     </div>
   );
 }
