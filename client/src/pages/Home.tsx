@@ -6,6 +6,10 @@ import VideoTable from "@/components/VideoTable";
 import DateRangePicker from "@/components/DateRangePicker";
 import VideoComparison from "@/components/VideoComparison";
 import TrendChart from "@/components/TrendChart";
+import EngagementChart from "@/components/EngagementChart";
+import VideoSearch from "@/components/VideoSearch";
+import TopVideos from "@/components/TopVideos";
+import ChannelHealth from "@/components/ChannelHealth";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, Play, Users, Eye, Activity, Loader, Download } from "lucide-react";
@@ -25,6 +29,7 @@ export default function Home() {
     start: null,
     end: null,
   });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleChannelSearch = (id: string) => {
     setChannelId(id);
@@ -32,6 +37,10 @@ export default function Home() {
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
     setDateRange({ start, end });
+  };
+
+  const handleVideoSearch = (query: string) => {
+    setSearchQuery(query.toLowerCase());
   };
 
   // Usar datos reales si están disponibles, sino usar datos de demostración
@@ -50,7 +59,12 @@ export default function Home() {
   const allVideos = (stats?.videoPerformance || []) as VideoMetrics[];
   
   // Filter videos by date range
-  const filteredVideos = filterVideosByDateRange(allVideos, dateRange.start, dateRange.end);
+  let filteredVideos = filterVideosByDateRange(allVideos, dateRange.start, dateRange.end);
+  
+  // Filter videos by search query
+  if (searchQuery) {
+    filteredVideos = filteredVideos.filter((v) => v.title.toLowerCase().includes(searchQuery));
+  }
   
   // Get best/worst performing videos
   const { best, worst } = getVideoComparison(filteredVideos);
@@ -312,6 +326,42 @@ export default function Home() {
                 </Button>
               </div>
               <VideoTable videos={filteredVideos} />
+            </div>
+          )}
+
+          {/* Engagement Chart */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12">
+              <EngagementChart videos={filteredVideos} />
+            </div>
+          )}
+
+          {/* Channel Health Report */}
+          {filteredVideos.length > 0 && channel && (
+            <div className="mb-12">
+              <ChannelHealth metrics={metrics} videos={filteredVideos} />
+            </div>
+          )}
+
+          {/* Top Videos */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12">
+              <TopVideos videos={filteredVideos} limit={5} />
+            </div>
+          )}
+
+          {/* Videos Grid */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-mono text-sm text-muted-foreground flex items-center gap-2">
+                  <span className="w-1 h-4 bg-primary" />
+                  BÚSQUEDA DE VIDEOS
+                </h2>
+              </div>
+              <div className="mb-6">
+                <VideoSearch onSearch={handleVideoSearch} />
+              </div>
             </div>
           )}
 
