@@ -10,6 +10,11 @@ import EngagementChart from "@/components/EngagementChart";
 import VideoSearch from "@/components/VideoSearch";
 import TopVideos from "@/components/TopVideos";
 import ChannelHealth from "@/components/ChannelHealth";
+import ChannelComparison from "@/components/ChannelComparison";
+import DayOfWeekAnalytics from "@/components/DayOfWeekAnalytics";
+import AudienceDemographics from "@/components/AudienceDemographics";
+import ContentCalendar from "@/components/ContentCalendar";
+import GrowthAnalytics from "@/components/GrowthAnalytics";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, Play, Users, Eye, Activity, Loader, Download } from "lucide-react";
@@ -375,6 +380,39 @@ export default function Home() {
               <VideoGrid videos={filteredVideos} />
             </div>
           )}
+
+          {/* Day of Week Analytics */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12">
+              <DayOfWeekAnalytics videos={filteredVideos} />
+            </div>
+          )}
+
+          {/* Growth Analytics */}
+          {channel && (
+            <div className="mb-12">
+              <GrowthAnalytics channelTitle={channel.title} />
+            </div>
+          )}
+
+          {/* Audience Demographics */}
+          {channel && (
+            <div className="mb-12">
+              <AudienceDemographics channelTitle={channel.title} />
+            </div>
+          )}
+
+          {/* Content Calendar */}
+          {filteredVideos.length > 0 && (
+            <div className="mb-12">
+              <ContentCalendar videos={filteredVideos} />
+            </div>
+          )}
+
+          {/* Channel Comparison */}
+          <div className="mb-12">
+            <ChannelComparison />
+          </div>
         </>
       )}
 
