@@ -102,19 +102,19 @@ export default function VideoTable({ videos, onVideoSelect }: VideoTableProps) {
               >
                 <td className="px-4 py-3">
                   <div className="flex items-start gap-3">
-                    {video.thumbnail && (
+                    {video.thumbnail && typeof video.thumbnail === 'string' && (
                       <img
                         src={video.thumbnail}
-                        alt={video.title}
+                        alt={video.title || 'Video'}
                         className="w-12 h-12 object-cover rounded bg-muted flex-shrink-0"
                       />
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium line-clamp-2 text-foreground">
-                        {video.title}
+                        {video.title || 'Sin título'}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {video.publishedAt ? formatDate(video.publishedAt) : 'Sin fecha'}
+                        {video.publishedAt && typeof video.publishedAt === 'string' ? formatDate(video.publishedAt) : 'Sin fecha'}
                       </p>
                     </div>
                   </div>

@@ -22,11 +22,11 @@ export default function VideoComparison({ best, worst }: VideoComparisonProps) {
 
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-medium line-clamp-2 mb-2">{best.title}</p>
-              {best.thumbnail && (
+              <p className="text-sm font-medium line-clamp-2 mb-2">{best.title || 'Video'}</p>
+              {best.thumbnail && typeof best.thumbnail === 'string' && (
                 <img
                   src={best.thumbnail}
-                  alt={best.title}
+                  alt={best.title || 'Video'}
                   className="w-full h-32 object-cover rounded mb-4"
                 />
               )}
@@ -81,11 +81,11 @@ export default function VideoComparison({ best, worst }: VideoComparisonProps) {
 
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-medium line-clamp-2 mb-2">{worst.title}</p>
-              {worst.thumbnail && (
+              <p className="text-sm font-medium line-clamp-2 mb-2">{worst.title || 'Video'}</p>
+              {worst.thumbnail && typeof worst.thumbnail === 'string' && (
                 <img
                   src={worst.thumbnail}
-                  alt={worst.title}
+                  alt={worst.title || 'Video'}
                   className="w-full h-32 object-cover rounded mb-4"
                 />
               )}

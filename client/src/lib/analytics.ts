@@ -55,9 +55,9 @@ export function calculateCommentRate(views: number, comments: number): number {
  * Enrich video data with engagement metrics
  */
 export function enrichVideoMetrics(video: any): VideoMetrics {
-  const views = video.views || 0;
-  const likes = video.likes || 0;
-  const comments = video.comments || 0;
+  const views = video.viewCount || video.views || 0;
+  const likes = video.likeCount || video.likes || 0;
+  const comments = video.commentCount || video.comments || 0;
 
   return {
     id: video.id || '',
@@ -104,8 +104,10 @@ export function sortVideos(
         bVal = b.comments || 0;
         break;
       case 'date':
-        aVal = new Date(a.publishedAt || 0).getTime();
-        bVal = new Date(b.publishedAt || 0).getTime();
+        const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        aVal = aDate || 0;
+        bVal = bDate || 0;
         break;
     }
 
@@ -272,27 +274,33 @@ export function generateTrendData(
   const trendMap = new Map<string, number>();
 
   videos.forEach((video) => {
-    if (!video.publishedAt) return;
+    if (!video.publishedAt || typeof video.publishedAt !== 'string') return;
 
-    const pubDate = new Date(video.publishedAt);
-    let key: string;
+    try {
+      const pubDate = new Date(video.publishedAt);
+      if (isNaN(pubDate.getTime())) return;
 
-    if (period === 'weekly') {
-      const weekStart = new Date(pubDate);
-      weekStart.setDate(pubDate.getDate() - pubDate.getDay());
-      key = weekStart.toISOString().split('T')[0];
-    } else {
-      key = pubDate.toISOString().split('T')[0].substring(0, 7); // YYYY-MM
+      let key: string;
+
+      if (period === 'weekly') {
+        const weekStart = new Date(pubDate);
+        weekStart.setDate(pubDate.getDate() - pubDate.getDay());
+        key = weekStart.toISOString().split('T')[0];
+      } else {
+        key = pubDate.toISOString().split('T')[0].substring(0, 7); // YYYY-MM
+      }
+
+      trendMap.set(key, (trendMap.get(key) || 0) + (video.views || 0));
+    } catch (e) {
+      // Silently skip invalid dates
     }
-
-    trendMap.set(key, (trendMap.get(key) || 0) + video.views);
   });
 
   return Array.from(trendMap)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([period, views]) => ({
       period,
-      views,
+      views: views || 0,
       date: period,
     }));
 }
