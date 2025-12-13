@@ -136,14 +136,47 @@ class YouTubeService {
   }
 
   private generateDailyStats(videos: YouTubeVideo[]) {
-    const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab', 'Dom'];
-    const totalViews = videos.reduce((sum, v) => sum + v.viewCount, 0);
-    const avgDailyViews = Math.floor(totalViews / (7 * Math.max(videos.length, 1))) || 100;
+    // Build a last-30-days time series using video publish dates and view counts
+    const days = 30;
+    const result: Array<{ date: string; views: number }> = [];
+    const now = new Date();
 
-    return days.map((name) => ({
-      date: name,
-      views: Math.floor(avgDailyViews * (0.5 + Math.random() * 1.5)),
-    }));
+    // Initialize last N days with zero views
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      result.push({ date: d.toISOString().split('T')[0], views: 0 });
+    }
+
+    // Helper to find index by ISO date string (YYYY-MM-DD)
+    const idxByDate = new Map(result.map((r, i) => [r.date, i]));
+
+    // Aggregate video views by publish date where possible
+    videos.forEach((v) => {
+      if (!v.publishedAt) return;
+      try {
+        const pub = new Date(v.publishedAt);
+        if (isNaN(pub.getTime())) return;
+        const iso = pub.toISOString().split('T')[0];
+        if (idxByDate.has(iso)) {
+          result[idxByDate.get(iso)!].views += v.viewCount || 0;
+        } else {
+          // If published earlier than range, add a small portion to the most recent day
+          result[result.length - 1].views += Math.floor((v.viewCount || 0) * 0.05);
+        }
+      } catch (e) {
+        // ignore malformed dates
+      }
+    });
+
+    // If totals are all zero (very small channels), fallback to simple distribution
+    const total = result.reduce((s, r) => s + r.views, 0);
+    if (total === 0) {
+      const avg = Math.max(10, Math.floor((videos.reduce((s, v) => s + (v.viewCount || 0), 0) || 100) / days));
+      return result.map((r) => ({ ...r, views: avg }));
+    }
+
+    return result;
   }
 
   async getVideoAnalytics(videoId: string) {

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import youtubeService, { ChannelStats, YouTubeChannel, YouTubeVideo } from '@/services/youtubeService';
 import { enrichVideoMetrics, VideoMetrics } from '@/lib/analytics';
 
-export interface EnrichedChannelStats extends ChannelStats {
+// Make EnrichedChannelStats compatible with ChannelStats but allow videoPerformance to be enriched
+export interface EnrichedChannelStats extends Omit<ChannelStats, 'videoPerformance'> {
   videoPerformance?: VideoMetrics[];
 }
 

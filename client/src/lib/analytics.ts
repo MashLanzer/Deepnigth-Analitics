@@ -11,7 +11,12 @@ export interface VideoMetrics {
   likeRate?: number;
   commentRate?: number;
   thumbnail?: string;
-  duration?: number;
+  duration?: string;
+  tags?: string[];
+  shares?: number;
+  watchTime?: number;
+  avgViewDuration?: number;
+  description?: string;
 }
 
 export interface ChannelMetrics {
@@ -175,7 +180,7 @@ export function calculateChannelMetrics(
  * Get best and worst performing videos
  */
 export function getVideoComparison(videos: VideoMetrics[]) {
-  if (videos.length === 0) return { best: null, worst: null };
+  if (videos.length === 0) return { best: undefined, worst: undefined };
 
   const sortedByEngagement = sortVideos(videos, 'engagement', true);
 
@@ -270,37 +275,47 @@ export function generateTrendData(
   videos: VideoMetrics[],
   period: 'weekly' | 'monthly' = 'weekly'
 ): any[] {
+  // Generate a contiguous period map (last N weeks or months) and aggregate views
   const now = new Date();
-  const trendMap = new Map<string, number>();
+  const map = new Map<string, number>();
 
-  videos.forEach((video) => {
-    if (!video.publishedAt || typeof video.publishedAt !== 'string') return;
-
-    try {
-      const pubDate = new Date(video.publishedAt);
-      if (isNaN(pubDate.getTime())) return;
-
-      let key: string;
-
-      if (period === 'weekly') {
-        const weekStart = new Date(pubDate);
-        weekStart.setDate(pubDate.getDate() - pubDate.getDay());
-        key = weekStart.toISOString().split('T')[0];
-      } else {
-        key = pubDate.toISOString().split('T')[0].substring(0, 7); // YYYY-MM
-      }
-
-      trendMap.set(key, (trendMap.get(key) || 0) + (video.views || 0));
-    } catch (e) {
-      // Silently skip invalid dates
+  if (period === 'weekly') {
+    // Build last 12 weeks
+    const weeks = 12;
+    for (let i = weeks - 1; i >= 0; i--) {
+      const wStart = new Date(now);
+      wStart.setDate(now.getDate() - i * 7 - wStart.getDay());
+      const key = wStart.toISOString().split('T')[0];
+      map.set(key, 0);
     }
-  });
 
-  return Array.from(trendMap)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([period, views]) => ({
-      period,
-      views: views || 0,
-      date: period,
-    }));
+    videos.forEach((video) => {
+      if (!video.publishedAt) return;
+      const pub = new Date(video.publishedAt);
+      if (isNaN(pub.getTime())) return;
+      // Find week start for this date
+      const weekStart = new Date(pub);
+      weekStart.setDate(pub.getDate() - pub.getDay());
+      const key = weekStart.toISOString().split('T')[0];
+      if (map.has(key)) map.set(key, (map.get(key) || 0) + (video.views || 0));
+    });
+  } else {
+    // monthly - last 12 months
+    const months = 12;
+    for (let i = months - 1; i >= 0; i--) {
+      const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
+      map.set(key, 0);
+    }
+
+    videos.forEach((video) => {
+      if (!video.publishedAt) return;
+      const pub = new Date(video.publishedAt);
+      if (isNaN(pub.getTime())) return;
+      const key = `${pub.getFullYear()}-${String(pub.getMonth() + 1).padStart(2, '0')}`;
+      if (map.has(key)) map.set(key, (map.get(key) || 0) + (video.views || 0));
+    });
+  }
+
+  return Array.from(map.entries()).map(([period, views]) => ({ period, views: views || 0, date: period }));
 }

@@ -1,6 +1,7 @@
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { VideoMetrics } from '@/lib/analytics';
 import { Activity } from 'lucide-react';
+import { formatNumber } from '@/lib/utils';
 
 interface EngagementChartProps {
   videos: VideoMetrics[];
@@ -8,10 +9,12 @@ interface EngagementChartProps {
 
 export default function EngagementChart({ videos }: EngagementChartProps) {
   const chartData = videos.map((v) => ({
-    views: v.views,
-    engagement: v.engagementRate || 0,
+    views: Number(v.views || 0),
+    engagement: Number((v.engagementRate || 0).toFixed(2)),
     title: v.title,
-  }));
+  }))
+  .sort((a,b) => b.views - a.views)
+  .slice(0, 200); // limit points to avoid overdraw
 
   if (chartData.length === 0) {
     return (
@@ -36,27 +39,30 @@ export default function EngagementChart({ videos }: EngagementChartProps) {
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis
               dataKey="views"
               name="Vistas"
-              stroke="#666"
-              tick={{ fill: '#666', fontSize: 12, fontFamily: 'JetBrains Mono' }}
+              stroke="var(--muted-foreground)"
+              tick={{ fill: 'var(--muted-foreground)', fontSize: 12, fontFamily: 'JetBrains Mono' }}
               type="number"
+              tickFormatter={(v) => formatNumber(v)}
             />
             <YAxis
               dataKey="engagement"
               name="Engagement %"
-              stroke="#666"
-              tick={{ fill: '#666', fontSize: 12, fontFamily: 'JetBrains Mono' }}
+              stroke="var(--muted-foreground)"
+              tick={{ fill: 'var(--muted-foreground)', fontSize: 12, fontFamily: 'JetBrains Mono' }}
             />
             <Tooltip
               cursor={{ strokeDasharray: '3 3' }}
-              contentStyle={{ backgroundColor: '#0a0a0a', borderColor: '#333', color: '#e0e0e0' }}
-              formatter={(value) => (typeof value === 'number' ? value.toFixed(2) : value)}
-              labelFormatter={(value) => `Vistas: ${value}`}
+              contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+              formatter={(value: any, name: string) => [typeof value === 'number' ? value : value, name]}
+              labelFormatter={(label) => `Vistas: ${formatNumber(label as number)}`}
+              // custom renderer will show title from payload
+              itemSorter={(a:any, b:any) => b.value - a.value}
             />
-            <Scatter name="Videos" data={chartData} fill="#00FF41" />
+            <Scatter name="Videos" data={chartData} fill="var(--color-chart-1)" line={{}} />
           </ScatterChart>
         </ResponsiveContainer>
       </div>

@@ -10,12 +10,7 @@ import EngagementChart from "@/components/EngagementChart";
 import VideoSearch from "@/components/VideoSearch";
 import TopVideos from "@/components/TopVideos";
 import ChannelHealth from "@/components/ChannelHealth";
-import ChannelComparison from "@/components/ChannelComparison";
-import DayOfWeekAnalytics from "@/components/DayOfWeekAnalytics";
-import AudienceDemographics from "@/components/AudienceDemographics";
-import ContentCalendar from "@/components/ContentCalendar";
-import GrowthAnalytics from "@/components/GrowthAnalytics";
-import ThemeToggle from "@/components/ThemeToggle";
+// Lazy-loaded versions will be used below to reduce initial bundle size
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, Play, Users, Eye, Activity, Loader, Download } from "lucide-react";
@@ -49,10 +44,7 @@ const DEFAULT_CHANNEL_ID = "UCIlucAowvh8GUqsysgbpeMg";
 export default function Home() {
   const [channelId, setChannelId] = useState<string | null>(DEFAULT_CHANNEL_ID);
   const { stats, loading, error } = useYouTubeChannel(channelId);
-  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
-    start: null,
-    end: null,
-  });
+  const [dateRange, setDateRange] = useState<{ start?: Date; end?: Date }>({});
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleChannelSearch = (id: string) => {
@@ -60,7 +52,7 @@ export default function Home() {
   };
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
-    setDateRange({ start, end });
+    setDateRange({ start: start || undefined, end: end || undefined });
   };
 
   const handleVideoSearch = (query: string) => {

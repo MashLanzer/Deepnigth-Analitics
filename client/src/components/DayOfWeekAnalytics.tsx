@@ -44,7 +44,8 @@ export default function DayOfWeekAnalytics({ videos }: Props) {
     stat.totalViews = dayVideos.reduce((sum, v) => sum + (v.views || 0), 0);
     
     if (dayVideos.length > 0) {
-      const totalEngagement = dayVideos.reduce((sum, v) => sum + (v.engagement || 0), 0);
+      // Use engagementRate if present, otherwise approximate from likes/comments
+      const totalEngagement = dayVideos.reduce((sum, v) => sum + (v.engagementRate || ((v.likes || 0) + (v.comments || 0)) / Math.max(v.views || 1, 1) * 100), 0);
       stat.avgEngagement = totalEngagement / dayVideos.length;
     }
   });
